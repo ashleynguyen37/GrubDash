@@ -159,6 +159,15 @@ function update(req, res) {
     res.json({ data: order });
 }
 
+function destroy(req, res) {
+    const { orderId } = req.params;
+    const index = orders.findIndex((order) => order.id === orderId);
+    if(index > -1) {
+        orders.splice(index, 1);
+    }
+    res.sendStatus(204);
+}
+
 module.exports = {
     list,
     create: [
@@ -184,5 +193,9 @@ module.exports = {
         statusValidation,
         statusCheck,
         update
-    ]
+    ],
+    delete: [
+        orderExists,
+        destroy
+    ],
 }
