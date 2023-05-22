@@ -159,13 +159,19 @@ function update(req, res) {
     res.json({ data: order });
 }
 
-function destroy(req, res) {
+function destroy(req, res, next) {
     const { orderId } = req.params;
-    const index = orders.findIndex((order) => order.id === orderId);
-    if(index > -1) {
+    const order = res.locals.order;
+
+    if(order.status === "pending") {
+        const index = orders.findIndex((order) => order.id === orderId);
         orders.splice(index, 1);
+        res.sendStatus(204);
     }
-    res.sendStatus(204);
+    return next({
+        status: 400,
+        message: "order cannot be deleted unless the order status is 'pending'",
+    })
 }
 
 module.exports = {
