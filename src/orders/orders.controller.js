@@ -56,6 +56,65 @@ function dishesValidation(req, res, next) {
     })
 }
 
+function statusCheck(req, res, next) {
+    const { data: { status } = {} } = req.body;
+    if(status.includes("pending") || status.includes("preparing") || status.includes("out-for-delivery") || status.includes("delivered")) {
+        next();
+    }
+    next({
+        status: 400,
+    message: "status property must be valid string: 'pending', 'preparing', 'out-for-delivery', or 'delivered'",
+    })
+}
+
+function dishesCheck(req, res, next) {
+    const { data: { dishes } = {} } = req.body;
+    if (!Array.isArray(dishes) || dishes.length == 0) {
+      next({
+        status: 400,
+        message: "invalid dishes property: dishes property must be non-empty array",
+    });
+    }
+    next();
+  };
+
+function dishArrayValidation(req, res, next) {
+    const { data: { dishes } = {} } = req.body;
+  if (!Array.isArray(dishes) || dishes.length == 0) {
+    next({
+      status: 400,
+      message: "invalid dishes property: dishes property must be non-empty array",
+  });
+  }
+  next();
+  };
+
+function correctDishQuantity(req, res, next) {
+    const { data: { dishes } = {} } = req.body;
+    dishes.forEach((dish) => {
+      const quantity = dish.quantity;
+      if (!quantity || quantity <= 0 || typeof quantity !== "number") {
+        return next ({
+          status: 400,
+          message: `dish ${dish.id} must have quantity property, quantity must be an integer, and it must not be equal to or less than 0`
+        });
+      }
+    }); 
+    next();
+  };
+
+function orderIdMatch(req, res, next) {
+    const { data: { id } = {} } = req.body;
+    const orderId = req.params.orderId;
+    if (id !== undefined && id !== null && id !== "" && id !== orderId) {
+      next({
+        status: 400,
+        message: `id ${id} must match orderId provided in parameters`,
+      });
+    }
+     return next();
+  };
+
 function orderExists(req, res, next) {
     const { orderId } = req.params;
     const foundOrder = orders.find((order) => order.id === orderId);
@@ -84,13 +143,46 @@ function create(req, res) {
     res.status(201).json({ data: newOrder })
 }
 
+function read(req, res) {
+    res.json({ data: res.locals.order });
+}
+
+function update(req, res) {
+    const order = res.locals.order;
+    const { data: { deliverTo, mobileNumber, status, dishes } = {} } = req.body;
+
+    order.deliverTo = deliverTo;
+    order.mobileNumber = mobileNumber;
+    order.status = status;
+    order.dishes = dishes;
+
+    res.json({ data: order });
+}
+
 module.exports = {
     list,
     create: [
         deliverToValidation,
         mobileNumberValidation,
-        statusValidation,
         dishesValidation,
+        dishArrayValidation,
+        correctDishQuantity,
         create
+    ],
+    read: [
+        orderExists,
+        read
+    ],
+    update: [
+        orderExists,
+        orderIdMatch,
+        deliverToValidation,
+        mobileNumberValidation,
+        dishesValidation,
+        dishArrayValidation,
+        correctDishQuantity,
+        statusValidation,
+        statusCheck,
+        update
     ]
 }
